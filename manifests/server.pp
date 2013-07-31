@@ -71,7 +71,7 @@ class rabbitmq::server(
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
 
-  class { 'rabbitmq::package':
+  class { 'rabbitmq::install':
     package_name => $package_name,
     pkg_ensure   => $pkg_ensure_real,
     notify       => Class['rabbitmq::service'],

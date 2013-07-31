@@ -1,4 +1,4 @@
-# Class: rabbitmq::package
+# Class: rabbitmq::install
 #
 #   This class manages the rabbitmq package itself.
 #
@@ -15,7 +15,7 @@
 #
 # Sample Usage:
 #
-class rabbitmq::package (
+class rabbitmq::install (
   $package_name,
   $pkg_ensure
 ) {
