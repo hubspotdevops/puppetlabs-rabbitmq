@@ -71,6 +71,10 @@ class rabbitmq::server(
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
 
+  anchor { 'rabbitmq::begin':
+    before => Class['rabbitmq::install']
+  }
+
   class { 'rabbitmq::install':
     package_name => $package_name,
     pkg_ensure   => $pkg_ensure_real,
@@ -146,6 +150,10 @@ class rabbitmq::server(
       ensure   => absent,
       provider => 'rabbitmqctl',
     }
+  }
+
+  anchor { 'rabbitmq::end':
+    require => Class['rabbitmq::service']
   }
 
 }
