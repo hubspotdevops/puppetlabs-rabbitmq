@@ -1,4 +1,4 @@
-# Class: rabbitmq::service
+# Class: rabbitmq::package
 #
 #   This class manages the rabbitmq package itself.
 #
