@@ -17,7 +17,7 @@
 #  [*cluster_disk_nodes*] - which nodes to cluster with (including the current one)
 #  [*erlang_cookie*] - erlang cookie, must be the same for all nodes in a cluster
 #  [*wipe_db_on_cookie_change*] - whether to wipe the RabbitMQ data if the specified
-#    erlang_cookie differs from the current one. This is a sad parameter: actually, 
+#    erlang_cookie differs from the current one. This is a sad parameter: actually,
 #    if the cookie indeed differs, then wiping the database is the *only* thing you
 #    can do. You're only required to set this parameter to true as a sign that you
 #    realise this.
@@ -25,7 +25,7 @@
 #  stdlib
 # Sample Usage:
 #
-#  
+#
 #
 #
 # [Remember: No empty lines between comments and class definition]
@@ -71,10 +71,16 @@ class rabbitmq::server(
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
 
-  package { $package_name:
-    ensure => $pkg_ensure_real,
-    notify => Class['rabbitmq::service'],
+  anchor { 'rabbitmq::begin':
+    before => Class['rabbitmq::install']
   }
+
+  class { 'rabbitmq::install':
+    package_name => $package_name,
+    pkg_ensure   => $pkg_ensure_real,
+    notify       => Class['rabbitmq::service'],
+  }
+
 
   file { '/etc/rabbitmq':
     ensure  => directory,
@@ -144,6 +150,10 @@ class rabbitmq::server(
       ensure   => absent,
       provider => 'rabbitmqctl',
     }
+  }
+
+  anchor { 'rabbitmq::end':
+    require => Class['rabbitmq::service']
   }
 
 }
