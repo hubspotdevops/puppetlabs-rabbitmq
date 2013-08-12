@@ -48,6 +48,8 @@ class rabbitmq::server(
   $env_config='UNSET',
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
   $wipe_db_on_cookie_change=false,
+  $rabbitmq_dl_user = 'guest',
+  $rabbitmq_dl_pass = 'guest'
 ) {
 
   validate_bool($delete_guest_user, $config_stomp, $guest_admin)
@@ -166,14 +168,19 @@ class rabbitmq::server(
     provider => 'rabbitmqctl',
   }
 
+  if $rabbitmq_dl_user != 'UNSET' {
+    $rabbitmqadmin_auth = "${rabbitmq_dl_user}:${rabbitmq_dl_pass}@"
+  } else {
+    $rabbitmqadmin_auth = ''
   }
 
   exec { 'Download rabbitmqadmin':
-    command => "curl http://localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
+    command => "curl http://${$rabbitmqadmin_auth}localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
     creates => '/var/tmp/rabbitmqadmin',
     require => [
       Class['rabbitmq::service'],
-      Rabbitmq_plugin['rabbitmq_management']
+      Rabbitmq_plugin['rabbitmq_management'],
+      Rabbitmq_user[$rabbitmq_dl_user],
     ],
     path    => '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin'
   }
