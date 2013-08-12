@@ -154,10 +154,6 @@ class rabbitmq::server(
     }
   }
 
-  rabbitmq_plugin { 'rabbitmq_management':
-    ensure => present,
-  }
-
   exec { 'Download rabbitmqadmin':
     command => "curl http://${$admin_user}:${$admin_pass}@localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
     creates => '/var/tmp/rabbitmqadmin',
