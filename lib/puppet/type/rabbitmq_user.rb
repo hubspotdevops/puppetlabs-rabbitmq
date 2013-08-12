@@ -31,9 +31,17 @@ Puppet::Type.newtype(:rabbitmq_user) do
     defaultto :false
   end
 
+  newproperty(:tags) do
+    desc "User's tags value  Cannot be combined with admin property."
+    defaultto :nil
+  end
+
   validate do
     if self[:ensure] == :present and ! self[:password]
       raise ArgumentError, 'must set password when creating user' unless self[:password]
+    end
+    if self[:admin] and self[:tags]
+      raise ArgumentError, 'Cannot use both admin and tags.'
     end
   end
 
