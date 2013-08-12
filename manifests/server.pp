@@ -157,6 +157,7 @@ class rabbitmq::server(
       Class['rabbitmq::service'],
       Rabbitmq_plugin['rabbitmq_management']
     ],
+    path    => '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin'
   }
 
   # XXX: Update the rabbitmq_exchange provider if this changes.
