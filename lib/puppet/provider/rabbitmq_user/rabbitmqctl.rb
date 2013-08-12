@@ -54,7 +54,7 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
     end
   end
 
-  def tags
+  def user_tags
     # Just always have this apply until I understand ruby better.
     :false
   end
@@ -65,7 +65,7 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
     end
   end
 
-  def tags=(tag_list)
+  def user_tags=(tag_list)
     if tag_list
       set_user_tags(tag_list)
     end
