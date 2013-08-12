@@ -46,8 +46,6 @@ class rabbitmq::server(
   $env_config='UNSET',
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
   $wipe_db_on_cookie_change=false,
-  $admin_user = undef,
-  $admin_pass = undef
 ) {
 
   validate_bool($delete_guest_user, $config_stomp)
@@ -159,7 +157,7 @@ class rabbitmq::server(
   }
 
   exec { 'Download rabbitmqadmin':
-    command => "curl http://${$admin_user}:${$admin_pass}@localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
+    command => "curl http://localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
     creates => '/var/tmp/rabbitmqadmin',
     require => [
       Class['rabbitmq::service'],
