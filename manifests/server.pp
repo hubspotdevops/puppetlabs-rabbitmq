@@ -31,6 +31,7 @@
 # [Remember: No empty lines between comments and class definition]
 class rabbitmq::server(
   $port = '5672',
+  $admin_port = '55672',
   $delete_guest_user = false,
   $package_name = 'rabbitmq-server',
   $version = 'UNSET',
@@ -44,7 +45,9 @@ class rabbitmq::server(
   $config='UNSET',
   $env_config='UNSET',
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
-  $wipe_db_on_cookie_change=false
+  $wipe_db_on_cookie_change=false,
+  $admin_user = undef,
+  $admin_pass = undef
 ) {
 
   validate_bool($delete_guest_user, $config_stomp)
@@ -133,6 +136,11 @@ class rabbitmq::server(
     notify  => Class['rabbitmq::service'],
   }
 
+  rabbitmq_plugin { 'rabbitmq_management':
+    ensure => present,
+    notify => Class['rabbitmq::service']
+  }
+
   class { 'rabbitmq::service':
     service_name => $service_name,
     ensure       => $service_ensure,
@@ -151,7 +159,7 @@ class rabbitmq::server(
   }
 
   exec { 'Download rabbitmqadmin':
-    command => "curl http://${default_user}:${default_pass}@localhost:5${port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
+    command => "curl http://${$admin_user}:${$admin_pass}@localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
     creates => '/var/tmp/rabbitmqadmin',
     require => [
       Class['rabbitmq::service'],
