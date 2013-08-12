@@ -54,6 +54,11 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
     end
   end
 
+  def tags
+    # Just always have this apply until I understand ruby better.
+    :false
+  end
+
   def admin=(state)
     if state == :true
       make_user_admin()
