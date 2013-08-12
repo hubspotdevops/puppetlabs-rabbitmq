@@ -33,6 +33,8 @@ class rabbitmq::server(
   $port = '5672',
   $admin_port = '55672',
   $delete_guest_user = false,
+  $guest_admin = true, # This is the default. Consider changing this or below.
+  $guest_password = 'guest',
   $package_name = 'rabbitmq-server',
   $version = 'UNSET',
   $service_name = 'rabbitmq-server',
@@ -50,7 +52,7 @@ class rabbitmq::server(
   $admin_pass = undef
 ) {
 
-  validate_bool($delete_guest_user, $config_stomp)
+  validate_bool($delete_guest_user, $config_stomp, $guest_admin)
   validate_re($port, '\d+')
   validate_re($stomp_port, '\d+')
 
@@ -146,12 +148,26 @@ class rabbitmq::server(
     ensure       => $service_ensure,
   }
 
+  # WARN: this is a departure from how upstream handles this user.  If you
+  # don't manage the user you're left with a guest user that has admin
+  # access.  Here we can choose to delete the user or actually manage it.
+  # I'm keeping the guest so that it can download rabbitmqadmin.  We may
+  # look at the ability to create arbitrary users here to do the
+  # downloading at a later point.  This may not be an issue in later
+  # RabbitMQ versions though.
   if $delete_guest_user {
-    # delete the default guest user
-    rabbitmq_user{ 'guest':
-      ensure   => absent,
-      provider => 'rabbitmqctl',
-    }
+    $guest_ensure = absent
+  } else {
+    $guest_ensure = present
+  }
+
+  rabbitmq_user{ 'guest':
+    ensure   => $guest_ensure,
+    password => $guest_password,
+    admin    => $guest_admin,
+    provider => 'rabbitmqctl',
+  }
+
   }
 
   exec { 'Download rabbitmqadmin':
