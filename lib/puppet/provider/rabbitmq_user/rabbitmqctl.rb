@@ -55,8 +55,20 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
   end
 
   def user_tags
-    # Just always have this apply until I understand ruby better.
-    :false
+
+    list_users_result = rabbitmqctl('list_users')
+    user_tags_line = list_users_result.split(/\n/)[1..-2].detect do |line|
+      line.match(/^#{Regexp.escape(resource[:name])}(\s+\S+|)$/)
+    end
+
+    user_tags_match_data = user_tags_line.match(/^#{Regexp.escape(resource[:name])}\s+\[(.*)\]/)
+    if user_tags_match_data
+      current_tags = user_tags_match_data[1].split(',')
+      return current_tags
+    else
+      raise Puppet::Error, "Could not match line '#{resource[:name]} ' from list_users (perhaps the user does not exists?)"
+    end
+
   end
 
   def admin=(state)
@@ -66,7 +78,7 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
   end
 
   def user_tags=(tag_list)
-    if tag_list
+    if tag_list.sort != self.user_tags.sort
       set_user_tags(tag_list)
     end
   end
@@ -76,7 +88,8 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
   end
 
   def set_user_tags(tag_list)
-    rabbitmqctl('set_user_tags', resource[:name], tag_list)
+    tag_list_str = tag_list.sort.join(',')
+    rabbitmqctl('set_user_tags', resource[:name], tag_list_str)
   end
 
 end
