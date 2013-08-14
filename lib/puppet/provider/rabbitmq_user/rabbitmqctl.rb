@@ -26,7 +26,7 @@ Puppet::Type.type(:rabbitmq_user).provide(:rabbitmqctl) do
     if resource[:admin] == :true
       make_user_admin()
     end
-    if resource[:tags]
+    if resource[:user_tags]
       set_user_tags()
     end
   end
