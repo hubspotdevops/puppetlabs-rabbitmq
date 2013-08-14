@@ -40,8 +40,8 @@ Puppet::Type.newtype(:rabbitmq_user) do
     if self[:ensure] == :present and ! self[:password]
       raise ArgumentError, 'must set password when creating user' unless self[:password]
     end
-    if self[:admin] and self[:user_tags]
-      raise ArgumentError, 'Cannot use both admin and tags.'
+    if self[:admin] != :false and self[:user_tags] != :nil
+      raise ArgumentError, "Cannot use both admin and tags for Rabbitmq_user[#{self[:name]}]"
     end
   end
 
