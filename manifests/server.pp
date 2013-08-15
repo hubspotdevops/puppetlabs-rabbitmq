@@ -48,8 +48,8 @@ class rabbitmq::server(
   $env_config='UNSET',
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
   $wipe_db_on_cookie_change=false,
-  $admin_user = undef,
-  $admin_pass = undef
+  $rabbitmq_dl_user = 'UNSET',
+  $rabbitmq_dl_pass = 'UNSET'
 ) {
 
   validate_bool($delete_guest_user, $config_stomp, $guest_admin)
@@ -102,7 +102,7 @@ class rabbitmq::server(
 
   if $config_cluster {
     file { 'erlang_cookie':
-      path =>"/var/lib/rabbitmq/.erlang.cookie",
+      path    => "/var/lib/rabbitmq/.erlang.cookie",
       owner   => rabbitmq,
       group   => rabbitmq,
       mode    => '0400',
@@ -168,14 +168,19 @@ class rabbitmq::server(
     provider => 'rabbitmqctl',
   }
 
+  if $rabbitmq_dl_user != 'UNSET' {
+    $rabbitmqadmin_auth = "${rabbitmq_dl_user}:${rabbitmq_dl_pass}@"
+  } else {
+    $rabbitmqadmin_auth = ''
   }
 
   exec { 'Download rabbitmqadmin':
-    command => "curl http://${$admin_user}:${$admin_pass}@localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
+    command => "curl http://${$rabbitmqadmin_auth}localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
     creates => '/var/tmp/rabbitmqadmin',
     require => [
       Class['rabbitmq::service'],
-      Rabbitmq_plugin['rabbitmq_management']
+      Rabbitmq_plugin['rabbitmq_management'],
+      Rabbitmq_user[$rabbitmq_dl_user],
     ],
     path    => '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin'
   }
