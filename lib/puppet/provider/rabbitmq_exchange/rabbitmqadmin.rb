@@ -14,7 +14,7 @@ Puppet::Type.type(:rabbitmq_exchange).provide(:rabbitmqadmin) do
 
   def self.instances
     resources = []
-    rabbitmqadmin('list', 'exchanges').split(/\n/)[3..-2].collect do |line|
+    rabbitmqadmin('-c', '/etc/rabbitmq/rabbitmqadmin.conf', 'list', 'exchanges').split(/\n/)[3..-2].collect do |line|
       if line =~ /^\|\s+(\S+)\s+\|\s+(\S+)?\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|$/
         entry = {
           :ensure => :present,
@@ -46,14 +46,14 @@ Puppet::Type.type(:rabbitmq_exchange).provide(:rabbitmqadmin) do
   def create
     vhost_opt = should_vhost ? "--vhost=#{should_vhost}" : ''
     name = resource[:name].split('@')[0]
-    rabbitmqadmin('declare', 'exchange', vhost_opt, "name=#{name}", "type=#{resource[:type]}")
+    rabbitmqadmin('-c', '/etc/rabbitmq/rabbitmqadmin.conf', 'declare', 'exchange', vhost_opt, "name=#{name}", "type=#{resource[:type]}")
     @property_hash[:ensure] = :present
   end
 
   def destroy
     vhost_opt = should_vhost ? "--vhost=#{should_vhost}" : ''
     name = resource[:name].split('@')[0]
-    rabbitmqadmin('delete', 'exchange', vhost_opt, "name=#{name}")
+    rabbitmqadmin('-c', '/etc/rabbitmq/rabbitmqadmin.conf', 'delete', 'exchange', vhost_opt, "name=#{name}")
     @property_hash[:ensure] = :absent
   end
 
