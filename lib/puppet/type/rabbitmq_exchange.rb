@@ -11,6 +11,8 @@ Puppet::Type.newtype(:rabbitmq_exchange) do
     end
   end
 
+  autorequire(:file) { '/usr/local/bin/rabbitmqadmin' }
+
   newparam(:name, :namevar => true) do
     desc 'Name of exchange'
     newvalues(/^\S*@\S+$/)
