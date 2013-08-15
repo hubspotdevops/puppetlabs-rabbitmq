@@ -168,4 +168,8 @@ class rabbitmq::server(
     require => Exec['Download rabbitmqadmin'],
   }
 
+  Package[$package_name] ->
+  Rabbitmq_plugin<| |> ~>
+  Class['rabbitmq::service']
+
 }
