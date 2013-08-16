@@ -201,6 +201,33 @@ class rabbitmq::server(
     }
   }
 
+  # Create the user for use by rabbitmqadmin and give them proper
+  # permissions to alter exchanges.
+  #
+  # NOTE: The 'administrator' tag is required in order to create access the
+  # console.  The rabbitmq_user_permissions are needed to manipulate
+  # anything.
+  if $rabbitmq_admin_user != 'UNSET' {
+    rabbitmq_user{ $rabbitmq_admin_user:
+      ensure   => present,
+      password => $rabbitmq_admin_pass,
+      admin    => true,
+      provider => 'rabbitmqctl',
+    }
+
+    rabbitmq_user_permissions { "${rabbitmq_admin_user}@/":
+      configure_permission => '.*',
+      read_permission      => '.*',
+      write_permission     => '.*',
+      provider             => 'rabbitmqctl',
+    }
+
+    $rabbitmq_exchange_user = $rabbitmq_admin_user
+  } else {
+    $rabbitmq_exchange_user = 'guest'
+  }
+
+
   if $rabbitmq_dl_user != 'UNSET' {
     $rabbitmqadmin_auth = "${rabbitmq_dl_user}:${rabbitmq_dl_pass}@"
   } else {
@@ -224,7 +251,8 @@ class rabbitmq::server(
     group   => 'root',
     source  => '/var/tmp/rabbitmqadmin',
     mode    => '0755',
-    require => Exec['Download rabbitmqadmin'],
+    require => [Exec['Download rabbitmqadmin'],
+                Rabbitmq_user[$rabbitmq_exchange_user]],
   }
 
   Package[$package_name] ->
