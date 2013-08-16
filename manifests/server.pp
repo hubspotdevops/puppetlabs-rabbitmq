@@ -263,4 +263,10 @@ class rabbitmq::server(
   Rabbitmq_plugin<| |> ~>
   Class['rabbitmq::service']
 
+  Rabbitmq_user<| |> ->
+  Rabbitmq_user_permissions<| |> ->
+
+  Rabbitmq_vhost<| |> ->
+  Rabbitmq_user_permissions<| |> ->
+  Rabbitmq_exchange<| |>
 }
