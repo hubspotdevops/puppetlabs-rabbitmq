@@ -188,6 +188,19 @@ class rabbitmq::server(
     provider => 'rabbitmqctl',
   }
 
+  # Disabling guets's administrator tag removes their ability to access the
+  # mgmt console but still leaves them access to read, write, and configure
+  # everything.  We should take that away too.
+  #
+  # FIXME: THIS DOES NOT WORK!  Requires altering the provider to call
+  # clear_permissions.
+  #
+  if $guest_admin == false {
+    rabbitmq_user_permissions { 'guest@/':
+      provider => 'rabbitmqctl',
+    }
+  }
+
   if $rabbitmq_dl_user != 'UNSET' {
     $rabbitmqadmin_auth = "${rabbitmq_dl_user}:${rabbitmq_dl_pass}@"
   } else {
