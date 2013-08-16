@@ -59,7 +59,7 @@ class rabbitmq::server(
   validate_re($stomp_port, '\d+')
 
   if $guest_admin == false and $rabbitmq_admin_user == 'UNSET' {
-    fail('rabbitmq::server: if $guest_admin is false then $rabbitmq_admin_user must be set')
+    fail('If $guest_admin is false then $rabbitmq_admin_user must be set')
   }
 
   if $version == 'UNSET' {
