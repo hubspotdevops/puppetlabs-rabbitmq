@@ -264,7 +264,7 @@ class rabbitmq::server(
   Class['rabbitmq::service']
 
   Rabbitmq_user<| |> ->
-  Rabbitmq_user_permissions<| |> ->
+  Rabbitmq_user_permissions<| |>
 
   Rabbitmq_vhost<| |> ->
   Rabbitmq_user_permissions<| |> ->
