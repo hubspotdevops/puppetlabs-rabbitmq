@@ -49,7 +49,9 @@ class rabbitmq::server(
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
   $wipe_db_on_cookie_change=false,
   $rabbitmq_dl_user = 'UNSET',
-  $rabbitmq_dl_pass = 'UNSET'
+  $rabbitmq_dl_pass = 'UNSET',
+  $rabbitmq_admin_user = 'UNSET',
+  $rabbitmq_admin_pass = 'UNSET'
 ) {
 
   validate_bool($delete_guest_user, $config_stomp, $guest_admin)
@@ -72,6 +74,13 @@ class rabbitmq::server(
     $env_config_real = template("${module_name}/rabbitmq-env.conf.erb")
   } else {
     $env_config_real = $env_config
+  }
+  if $rabbitmq_admin_user == 'UNSET' {
+    $real_rabbitmq_admin_user = 'guest'
+    $real_rabbitmq_admin_pass = $guest_password
+  } else {
+    $real_rabbitmq_admin_user = $rabbitmq_admin_user
+    $real_rabbitmq_admin_pass = $rabbitmq_admin_pass
   }
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
@@ -100,9 +109,20 @@ class rabbitmq::server(
     notify  => Class['rabbitmq::service'],
   }
 
+  # NOTE: At some point this should either become a concatenated file or we
+  # should create our own provider specific file for our user.
+  file { 'rabbitmqadmin.conf':
+    ensure  => present,
+    path    => '/etc/rabbitmq/rabbitmqadmin.conf',
+    owner   => '0',
+    group   => '0',
+    mode    => '0600',
+    content => template("${module_name}/rabbitmqadmin.conf.erb")
+  }
+
   if $config_cluster {
     file { 'erlang_cookie':
-      path    => "/var/lib/rabbitmq/.erlang.cookie",
+      path    => '/var/lib/rabbitmq/.erlang.cookie',
       owner   => rabbitmq,
       group   => rabbitmq,
       mode    => '0400',
