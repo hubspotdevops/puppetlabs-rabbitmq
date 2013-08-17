@@ -1,11 +1,14 @@
 Puppet::Type.type(:rabbitmq_user_permissions).provide(:rabbitmqctl) do
 
-  commands :rabbitmqctl => 'rabbitmqctl'
-  defaultfor :feature=> :posix
+  if Puppet::PUPPETVERSION.to_f < 3
+    commands :rabbitmqctl => 'rabbitmqctl'
+  else
+     has_command(:rabbitmqctl, 'rabbitmqctl') do
+       environment :HOME => "/tmp"
+     end
+  end
 
-  #def self.instances
-  #
-  #end
+  defaultfor :feature=> :posix
 
   # cache users permissions
   def self.users(name, vhost)

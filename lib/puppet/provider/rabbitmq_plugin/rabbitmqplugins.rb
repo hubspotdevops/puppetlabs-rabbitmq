@@ -1,6 +1,13 @@
 Puppet::Type.type(:rabbitmq_plugin).provide(:rabbitmqplugins) do
 
-  commands :rabbitmqplugins => 'rabbitmq-plugins'
+  if Puppet::PUPPETVERSION.to_f < 3
+    commands :rabbitmqplugins, 'rabbitmq-plugins'
+  else
+     has_command(:rabbitmqplugins, 'rabbitmq-plugins') do
+       environment :HOME => "/tmp"
+     end
+  end
+
   defaultfor :feature => :posix
 
   def self.instances
