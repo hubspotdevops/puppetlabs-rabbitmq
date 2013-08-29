@@ -89,10 +89,16 @@ class rabbitmq::server(
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
 
-  package { $package_name:
-    ensure => $pkg_ensure_real,
-    notify => Class['rabbitmq::service'],
+  anchor { 'rabbitmq::begin':
+    before => Class['rabbitmq::install']
   }
+
+  class { 'rabbitmq::install':
+    package_name => $package_name,
+    pkg_ensure   => $pkg_ensure_real,
+    notify       => Class['rabbitmq::service'],
+  }
+
 
   file { '/etc/rabbitmq':
     ensure  => directory,
@@ -269,4 +275,9 @@ class rabbitmq::server(
   Rabbitmq_vhost<| |> ->
   Rabbitmq_user_permissions<| |> ->
   Rabbitmq_exchange<| |>
+
+  anchor { 'rabbitmq::end':
+    require => Class['rabbitmq::service']
+  }
+
 }
