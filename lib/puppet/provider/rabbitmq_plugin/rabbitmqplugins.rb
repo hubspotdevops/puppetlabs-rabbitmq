@@ -1,9 +1,16 @@
 Puppet::Type.type(:rabbitmq_plugin).provide(:rabbitmqplugins) do
 
+  if Puppet::PUPPETVERSION.to_f < 3
+    commands :rabbitmqplugins, 'rabbitmq-plugins'
+  else
+     has_command(:rabbitmqplugins, 'rabbitmq-plugins') do
+       environment :HOME => "/tmp"
+     end
+  end
   defaultfor :feature => :posix
 
   def initialize(*args)
-	super
+  super
     @@rabbitmqplugins = Puppet::Provider::Command.new('rabbitmqplugins', 'rabbitmq-plugins', Puppet::Util, Puppet::Util::Execution, { :failonfail => true, :combine => true, :custom_environment => { 'HOME' => '/root' } })
   end
 

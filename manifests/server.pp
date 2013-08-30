@@ -31,7 +31,10 @@
 # [Remember: No empty lines between comments and class definition]
 class rabbitmq::server(
   $port = '5672',
+  $admin_port = '55672',
   $delete_guest_user = false,
+  $guest_admin = true, # This is the default. Consider changing this or below.
+  $guest_password = 'guest',
   $package_name = 'rabbitmq-server',
   $version = 'UNSET',
   $service_name = 'rabbitmq-server',
@@ -44,12 +47,20 @@ class rabbitmq::server(
   $config='UNSET',
   $env_config='UNSET',
   $erlang_cookie='EOKOWXQREETZSHFNTPEY',
-  $wipe_db_on_cookie_change=false
+  $wipe_db_on_cookie_change=false,
+  $rabbitmq_dl_user = 'UNSET',
+  $rabbitmq_dl_pass = 'UNSET',
+  $rabbitmq_admin_user = 'UNSET',
+  $rabbitmq_admin_pass = 'UNSET'
 ) {
 
-  validate_bool($delete_guest_user, $config_stomp)
+  validate_bool($delete_guest_user, $config_stomp, $guest_admin)
   validate_re($port, '\d+')
   validate_re($stomp_port, '\d+')
+
+  if $guest_admin == false and $rabbitmq_admin_user == 'UNSET' {
+    fail('If $guest_admin is false then $rabbitmq_admin_user must be set')
+  }
 
   if $version == 'UNSET' {
     $version_real = '2.4.1'
@@ -67,6 +78,13 @@ class rabbitmq::server(
     $env_config_real = template("${module_name}/rabbitmq-env.conf.erb")
   } else {
     $env_config_real = $env_config
+  }
+  if $rabbitmq_admin_user == 'UNSET' {
+    $real_rabbitmq_admin_user = 'guest'
+    $real_rabbitmq_admin_pass = $guest_password
+  } else {
+    $real_rabbitmq_admin_user = $rabbitmq_admin_user
+    $real_rabbitmq_admin_pass = $rabbitmq_admin_pass
   }
 
   $plugin_dir = "/usr/lib/rabbitmq/lib/rabbitmq_server-${version_real}/plugins"
@@ -101,9 +119,20 @@ class rabbitmq::server(
     notify  => Class['rabbitmq::service'],
   }
 
+  # NOTE: At some point this should either become a concatenated file or we
+  # should create our own provider specific file for our user.
+  file { 'rabbitmqadmin.conf':
+    ensure  => present,
+    path    => '/etc/rabbitmq/rabbitmqadmin.conf',
+    owner   => '0',
+    group   => '0',
+    mode    => '0600',
+    content => template("${module_name}/rabbitmqadmin.conf.erb")
+  }
+
   if $config_cluster {
     file { 'erlang_cookie':
-      path =>"/var/lib/rabbitmq/.erlang.cookie",
+      path    => '/var/lib/rabbitmq/.erlang.cookie',
       owner   => rabbitmq,
       group   => rabbitmq,
       mode    => '0400',
@@ -139,18 +168,113 @@ class rabbitmq::server(
     notify  => Class['rabbitmq::service'],
   }
 
+  rabbitmq_plugin { 'rabbitmq_management':
+    ensure => present,
+    notify => Class['rabbitmq::service']
+  }
+
   class { 'rabbitmq::service':
     service_name => $service_name,
     ensure       => $service_ensure,
   }
 
+  # WARN: this is a departure from how upstream handles this user.  If you
+  # don't manage the user you're left with a guest user that has admin
+  # access.  Here we can choose to delete the user or actually manage it.
+  # I'm keeping the guest so that it can download rabbitmqadmin.  We may
+  # look at the ability to create arbitrary users here to do the
+  # downloading at a later point.  This may not be an issue in later
+  # RabbitMQ versions though.
   if $delete_guest_user {
-    # delete the default guest user
-    rabbitmq_user{ 'guest':
-      ensure   => absent,
+    $guest_ensure = absent
+  } else {
+    $guest_ensure = present
+  }
+
+  rabbitmq_user{ 'guest':
+    ensure   => $guest_ensure,
+    password => $guest_password,
+    admin    => $guest_admin,
+    provider => 'rabbitmqctl',
+  }
+
+  # Disabling guets's administrator tag removes their ability to access the
+  # mgmt console but still leaves them access to read, write, and configure
+  # everything.  We should take that away too.
+  #
+  # FIXME: THIS DOES NOT WORK!  Requires altering the provider to call
+  # clear_permissions.
+  #
+  if $guest_admin == false {
+    rabbitmq_user_permissions { 'guest@/':
       provider => 'rabbitmqctl',
     }
   }
+
+  # Create the user for use by rabbitmqadmin and give them proper
+  # permissions to alter exchanges.
+  #
+  # NOTE: The 'administrator' tag is required in order to create access the
+  # console.  The rabbitmq_user_permissions are needed to manipulate
+  # anything.
+  if $rabbitmq_admin_user != 'UNSET' {
+    rabbitmq_user{ $rabbitmq_admin_user:
+      ensure   => present,
+      password => $rabbitmq_admin_pass,
+      admin    => true,
+      provider => 'rabbitmqctl',
+    }
+
+    rabbitmq_user_permissions { "${rabbitmq_admin_user}@/":
+      configure_permission => '.*',
+      read_permission      => '.*',
+      write_permission     => '.*',
+      provider             => 'rabbitmqctl',
+    }
+
+    $rabbitmq_exchange_user = $rabbitmq_admin_user
+  } else {
+    $rabbitmq_exchange_user = 'guest'
+  }
+
+
+  if $rabbitmq_dl_user != 'UNSET' {
+    $rabbitmqadmin_auth = "${rabbitmq_dl_user}:${rabbitmq_dl_pass}@"
+  } else {
+    $rabbitmqadmin_auth = ''
+  }
+
+  exec { 'Download rabbitmqadmin':
+    command => "curl http://${$rabbitmqadmin_auth}localhost:${admin_port}/cli/rabbitmqadmin -o /var/tmp/rabbitmqadmin",
+    creates => '/var/tmp/rabbitmqadmin',
+    require => [
+      Class['rabbitmq::service'],
+      Rabbitmq_plugin['rabbitmq_management'],
+      Rabbitmq_user[$rabbitmq_dl_user],
+    ],
+    path    => '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin'
+  }
+
+  # XXX: Update the rabbitmq_exchange provider if this changes.
+  file { '/usr/local/bin/rabbitmqadmin':
+    owner   => 'root',
+    group   => 'root',
+    source  => '/var/tmp/rabbitmqadmin',
+    mode    => '0755',
+    require => [Exec['Download rabbitmqadmin'],
+                Rabbitmq_user[$rabbitmq_exchange_user]],
+  }
+
+  Package[$package_name] ->
+  Rabbitmq_plugin<| |> ~>
+  Class['rabbitmq::service']
+
+  Rabbitmq_user<| |> ->
+  Rabbitmq_user_permissions<| |>
+
+  Rabbitmq_vhost<| |> ->
+  Rabbitmq_user_permissions<| |> ->
+  Rabbitmq_exchange<| |>
 
   anchor { 'rabbitmq::end':
     require => Class['rabbitmq::service']

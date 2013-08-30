@@ -1,54 +1,55 @@
 Puppet::Type.newtype(:rabbitmq_exchange) do
-	desc 'Native type for managing rabbitmq exchanges'
+  desc 'Native type for managing rabbitmq exchanges'
 
-	ensurable do
-		defaultto(:present)
-		newvalue(:present) do
-			provider.create
-		end
-		newvalue(:absent) do
-			provider.destroy
-		end
-	end
+  ensurable do
+    defaultto(:present)
+    newvalue(:present) do
+      provider.create
+    end
+    newvalue(:absent) do
+      provider.destroy
+    end
+  end
 
-	newparam(:name, :namevar => true) do
-		desc 'Name of the exchange'
-		newvalues(/^\S+$/)
-	end
+  autorequire(:file) { '/usr/local/bin/rabbitmqadmin' }
 
+  newparam(:name, :namevar => true) do
+    desc 'Name of exchange'
+    newvalues(/^\S*@\S+$/)
+  end
 
-	newparam(:host) do
-		desc 'Hostname of rabbitmq server.'
-		newvalues(/^\S+$/)
-		defaultto 'localhost'
-	end
+  newparam(:type) do
+    desc 'Exchange type to be set *on creation*'
+  end
 
-	newparam(:port) do
-		desc 'AMQP port of rabbitmq server.'
-		newvalues(/^\d+$/)
-		defaultto 5672
-	end
+  newparam(:user) do
+    desc 'The user to use to connect to rabbitmq'
+    defaultto('guest')
+    newvalues(/\S+/)
+  end
 
-	newparam(:user) do
-		desc 'Username to use when connecting to rabbitmq server'
-		newvalues(/^\S+$/)
-		defaultto 'guest'
-	end
+  newparam(:password) do
+    desc 'The password to use to connect to rabbitmq'
+    defaultto('guest')
+    newvalues(/\S+/)
+  end
 
-	newparam(:pass) do
-		desc 'Password to use when connecting to rabbitmq server'
-		newvalues(/^\S+$/)
-		defaultto 'guest'
-	end
+  validate do
+    if self[:ensure] == :present and self[:type].nil?
+      raise ArgumentError, "must set type when creating exchange for #{self[:name]} whose type is #{self[:type]}"
+    end
+  end
 
+  autorequire(:rabbitmq_vhost) do
+    [self[:name].split('@')[1]]
+  end
 
-	newproperty(:exchange_type) do
-		desc 'Type of exchange'
-		newvalue('direct')
-		newvalue('fanout')
-		newvalue('topic')
-		newvalue('headers')
-		defaultto :direct
-	end
+  autorequire(:rabbitmq_user) do
+    [self[:user]]
+  end
+
+  autorequire(:rabbitmq_user_permissions) do
+    ["#{self[:user]}@#{self[:name].split('@')[1]}"]
+  end
 
 end
